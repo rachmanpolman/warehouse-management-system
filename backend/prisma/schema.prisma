@@ -1,0 +1,33 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Tabel Master Barang
+model Product {
+  id        String          @id @default(uuid())
+  sku       String          @unique
+  name      String
+  barcode   String          @unique
+  stock     Int             @default(0)
+  minStock  Int             @default(5)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  movements StockMovement[]
+}
+
+// Tabel Riwayat Pengurangan / Penambahan Stok
+model StockMovement {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  type      String   // "OUT" atau "IN"
+  quantity  Int
+  notes     String?
+  createdAt DateTime @default(now())
+}

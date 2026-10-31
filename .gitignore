@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment Variables (Sangat Rahasia!)
+.env
+**/.env
+*.env.local
+
+# Build output
+dist/
+**/dist/
+build/
+**/build/
+
+# Android build cache
+android/.gradle/
+android/app/build/
+**/android/.gradle/
+**/android/app/build/
+
+# Folder expo lama yang tidak terpakai
+mobile-expo/
+
+# Log & OS Files
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
