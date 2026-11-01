@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
-import { Package, AlertTriangle, Activity, Scan, ArrowDownRight, Plus, BarChart3, Bell, ShoppingCart, QrCode } from 'lucide-react';
+import { Package, AlertTriangle, Activity, Scan, ArrowDownRight, Plus, BarChart3, Bell, ShoppingCart, QrCode, Pencil } from 'lucide-react';
 
 const SOCKET_SERVER_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
@@ -25,6 +25,8 @@ export default function App() {
   const [prForm, setPrForm] = useState({ quantity: 20, vendorName: 'PT Sumber Makmur', notes: '' });
   const [isSubmittingPr, setIsSubmittingPr] = useState(false);
   const [qrModalItem, setQrModalItem] = useState(null);
+  const [editModalItem, setEditModalItem] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
   
 
   // 1. Ambil Data Awal dari Backend API
@@ -325,6 +327,35 @@ export default function App() {
     }
   };
 
+    // Fungsi Simpan Edit Manual (Nama, Min, Max, Lead Time)
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editModalItem) return;
+    setIsEditing(true);
+    try {
+      const res = await fetch(`${SOCKET_SERVER_URL}/api/products/${editModalItem.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editModalItem.name,
+          minStock: Number(editModalItem.minStock),
+          maxStock: Number(editModalItem.maxStock),
+          leadTimeDays: Number(editModalItem.leadTimeDays),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error);
+      } else {
+        setEditModalItem(null);
+      }
+    } catch (err) {
+      alert('Gagal menyimpan perubahan barang!');
+    } finally {
+      setIsEditing(false);
+    }
+  };
+
     // Hitung ringkasan stok
   const totalStock = products.reduce((acc, curr) => acc + curr.stock, 0);
   const lowStockCount = products.filter((p) => p.stock <= p.minStock).length;
@@ -513,6 +544,22 @@ export default function App() {
                               className="bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs px-2 py-1.5 rounded-lg flex items-center gap-1 transition active:scale-95"
                               title="Tampilkan QR Code Barang">
                               <QrCode className="w-3.5 h-3.5" />
+                            </button>
+                                                        <button
+                              onClick={() =>
+                                setEditModalItem({
+                                  id: item.id,
+                                  sku: item.sku,
+                                  name: item.name,
+                                  minStock: item.minStock,
+                                  maxStock: item.maxStock ?? 100,
+                                  leadTimeDays: item.leadTimeDays ?? 7,
+                                })
+                              }
+                              className="bg-slate-700 hover:bg-slate-600 text-amber-300 text-xs px-2 py-1.5 rounded-lg flex items-center gap-1 transition active:scale-95"
+                              title="Edit Manual Nama & Batas Min/Max"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </td>
@@ -1027,6 +1074,82 @@ export default function App() {
                   🖨️ Cetak Label
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+        {/* MODAL EDIT MANUAL BARANG (NAMA, MIN, MAX, LEAD TIME) */}
+        {editModalItem && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl">
+              <h3 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
+                <Pencil className="w-5 h-5 text-amber-400" />
+                Edit Data & Batas Stok ({editModalItem.sku})
+              </h3>
+              <p className="text-slate-400 text-xs mb-4">
+                Atur batas Understock (Min) dan Overstock (Max) secara manual.
+              </p>
+              <form onSubmit={handleEditSubmit} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Nama Barang *</label>
+                  <input
+                    value={editModalItem.name}
+                    onChange={(e) => setEditModalItem({ ...editModalItem, name: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Stok Min *</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editModalItem.minStock}
+                      onChange={(e) => setEditModalItem({ ...editModalItem, minStock: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Stok Max *</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={editModalItem.maxStock}
+                      onChange={(e) => setEditModalItem({ ...editModalItem, maxStock: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Lead Time (hr)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={editModalItem.leadTimeDays}
+                      onChange={(e) => setEditModalItem({ ...editModalItem, leadTimeDays: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditModalItem(null)}
+                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 py-2.5 rounded-xl text-sm font-semibold"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isEditing}
+                    className="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-2.5 rounded-xl text-sm font-bold"
+                  >
+                    {isEditing ? 'Menyimpan...' : 'Simpan Perubahan'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
