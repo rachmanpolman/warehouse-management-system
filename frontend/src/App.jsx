@@ -362,8 +362,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#171926] text-slate-100 flex font-sans">
-      {/* SIDEBAR KIRI (Ramping & Modern seperti gambar referensi) */}
-      <aside className="w-16 md:w-20 bg-[#1e2132] border-r border-slate-800/80 flex flex-col items-center py-6 gap-8 shrink-0">
+      {/* SIDEBAR KIRI (Tampil di Tablet/Laptop md ke atas, di HP pindah ke Bottom Nav) */}
+      <aside className="hidden md:flex w-20 bg-[#1e2132] border-r border-slate-800/80 flex-col items-center py-6 gap-8 shrink-0">
         {/* Logo */}
         <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-500 to-emerald-400 flex items-center justify-center shadow-lg shadow-blue-500/20">
           <Package className="w-6 h-6 text-white" />
@@ -401,24 +401,29 @@ export default function App() {
 
       {/* KONTEN UTAMA */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* TOP HEADER BAR (Mirip gambar referensi: Sapaan + Tanggal + Notifikasi + Profil Divisi) */}
-        <header className="px-6 py-4 bg-[#1e2132]/70 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">
+        {/* TOP HEADER BAR (Responsif di HP & Desktop) */}
+        <header className="px-3.5 sm:px-6 py-3 sm:py-4 bg-[#1e2132]/70 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-2.5 sm:gap-4">
+          <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+            <div className="md:hidden w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 via-indigo-500 to-emerald-400 flex items-center justify-center shrink-0">
+              <Package className="w-5 h-5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-xl md:text-2xl font-bold text-white tracking-tight truncate">
                 Halo, {ROLE_META[activeRole]?.label}
               </h1>
-              <p className="text-xs text-slate-400">Live Warehouse & Procurement Synchronization</p>
+              <p className="text-[11px] sm:text-xs text-slate-400 truncate">
+                Live Warehouse & Procurement Synchronization
+              </p>
             </div>
-            <div className="hidden sm:flex items-center gap-2 bg-[#262a40] text-slate-300 text-xs font-medium px-3.5 py-2 rounded-xl border border-slate-700/60">
+            <div className="hidden lg:flex items-center gap-2 bg-[#262a40] text-slate-300 text-xs font-medium px-3.5 py-2 rounded-xl border border-slate-700/60">
               <Calendar className="w-3.5 h-3.5 text-blue-400" />
               <span>{todayStr}</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 ml-auto">
             {/* Indikator WebSocket */}
-            <div className="hidden md:flex items-center gap-2 bg-[#262a40] px-3 py-2 rounded-xl border border-slate-700/60">
+            <div className="hidden sm:flex items-center gap-2 bg-[#262a40] px-3 py-2 rounded-xl border border-slate-700/60">
               <span
                 className={`w-2.5 h-2.5 rounded-full ${
                   isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'
@@ -432,21 +437,21 @@ export default function App() {
             {/* Tombol Lonceng Notifikasi (Membuka Drawer tanpa memanjangkan halaman) */}
             <button
               onClick={() => setShowNotifDrawer(!showNotifDrawer)}
-              className="relative bg-[#262a40] hover:bg-slate-700/70 p-2.5 rounded-xl border border-slate-700/60 transition"
+              className="relative bg-[#262a40] hover:bg-slate-700/70 p-2 sm:p-2.5 rounded-xl border border-slate-700/60 transition"
               title="Notifikasi Divisi"
             >
-              <Bell className="w-5 h-5 text-slate-200" />
+              <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-slate-200" />
               {unreadNotifCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center">
                   {unreadNotifCount}
                 </span>
               )}
             </button>
 
             {/* Pemilih Divisi bergaya Kartu Profil di Pojok Kanan Atas */}
-            <div className="flex items-center gap-2.5 bg-[#262a40] pl-2.5 pr-3 py-1.5 rounded-xl border border-slate-700/60">
+            <div className="flex items-center gap-2 bg-[#262a40] pl-2 pr-2.5 py-1.5 rounded-xl border border-slate-700/60">
               <div
-                className={`w-8 h-8 rounded-full ${ROLE_META[activeRole]?.badge} flex items-center justify-center text-xs font-extrabold text-white uppercase`}
+                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full ${ROLE_META[activeRole]?.badge} flex items-center justify-center text-[10px] sm:text-xs font-extrabold text-white uppercase shrink-0`}
               >
                 {activeRole.slice(0, 2)}
               </div>
@@ -454,7 +459,7 @@ export default function App() {
                 <select
                   value={activeRole}
                   onChange={(e) => setActiveRole(e.target.value)}
-                  className="bg-transparent text-white text-xs font-bold focus:outline-none cursor-pointer"
+                  className="bg-transparent text-white text-[11px] sm:text-xs font-bold focus:outline-none cursor-pointer"
                 >
                   <option value="warehouse" className="bg-slate-900">Staff Warehouse</option>
                   <option value="purchasing" className="bg-slate-900">Tim Purchasing</option>
@@ -470,20 +475,20 @@ export default function App() {
         </header>
 
         {/* ISI DASHBOARD */}
-        <main className="p-6 space-y-6 max-w-[1440px] w-full mx-auto">
-          {/* 4 KARTU METRIK ATAS (Gaya persis gambar referensi dengan badge bulat berwarna) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <main className="p-3 sm:p-6 pb-24 md:pb-6 space-y-4 sm:space-y-6 max-w-[1440px] w-full mx-auto">
+          {/* 4 KARTU METRIK ATAS (2x2 di layar HP, 4 berjejer di layar Desktop) */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
             {/* Card 1 */}
-            <div className="bg-[#23273a] p-5 rounded-2xl border border-slate-700/40 shadow-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center">
-                  <Package className="w-4 h-4" />
+            <div className="bg-[#23273a] p-3.5 sm:p-5 rounded-2xl border border-slate-700/40 shadow-lg">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0">
+                  <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
-                <span className="text-sm text-slate-300 font-medium">Total Fisik Stok</span>
+                <span className="text-xs sm:text-sm text-slate-300 font-medium truncate">Total Fisik Stok</span>
               </div>
-              <div className="text-3xl font-extrabold text-white mt-3">{totalStock} Unit</div>
-              <div className="flex items-center justify-between text-xs mt-3 pt-2 border-t border-slate-700/40">
-                <span className="text-slate-400">Terdaftar</span>
+              <div className="text-xl sm:text-3xl font-extrabold text-white mt-2 sm:mt-3">{totalStock} Unit</div>
+              <div className="flex items-center justify-between text-[11px] sm:text-xs mt-2 sm:mt-3 pt-2 border-t border-slate-700/40">
+                <span className="text-slate-400 hidden sm:inline">Terdaftar</span>
                 <span className="text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full">
                   {products.length} Jenis SKU
                 </span>
@@ -491,16 +496,16 @@ export default function App() {
             </div>
 
             {/* Card 2 */}
-            <div className="bg-[#23273a] p-5 rounded-2xl border border-slate-700/40 shadow-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-                  <Layers className="w-4 h-4" />
+            <div className="bg-[#23273a] p-3.5 sm:p-5 rounded-2xl border border-slate-700/40 shadow-lg">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                  <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
-                <span className="text-sm text-slate-300 font-medium">Stok Kategori Aman</span>
+                <span className="text-xs sm:text-sm text-slate-300 font-medium truncate">Stok Aman</span>
               </div>
-              <div className="text-3xl font-extrabold text-white mt-3">{safeStockCount} SKU</div>
-              <div className="flex items-center justify-between text-xs mt-3 pt-2 border-t border-slate-700/40">
-                <span className="text-slate-400">Rasio sehat</span>
+              <div className="text-xl sm:text-3xl font-extrabold text-white mt-2 sm:mt-3">{safeStockCount} SKU</div>
+              <div className="flex items-center justify-between text-[11px] sm:text-xs mt-2 sm:mt-3 pt-2 border-t border-slate-700/40">
+                <span className="text-slate-400 hidden sm:inline">Rasio sehat</span>
                 <span className="text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full">
                   {safePct}% Gudang
                 </span>
@@ -508,19 +513,19 @@ export default function App() {
             </div>
 
             {/* Card 3 */}
-            <div className="bg-[#23273a] p-5 rounded-2xl border border-slate-700/40 shadow-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center">
-                  <AlertTriangle className="w-4 h-4" />
+            <div className="bg-[#23273a] p-3.5 sm:p-5 rounded-2xl border border-slate-700/40 shadow-lg">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
-                <span className="text-sm text-slate-300 font-medium">Understock & Overstock</span>
+                <span className="text-xs sm:text-sm text-slate-300 font-medium truncate">Under & Over</span>
               </div>
-              <div className="text-3xl font-extrabold text-white mt-3">
-                {lowStockCount} <span className="text-base font-normal text-slate-400">Min</span> / {overStockCount}{' '}
-                <span className="text-base font-normal text-slate-400">Max</span>
+              <div className="text-xl sm:text-3xl font-extrabold text-white mt-2 sm:mt-3">
+                {lowStockCount} <span className="text-xs sm:text-base font-normal text-slate-400">Min</span> / {overStockCount}{' '}
+                <span className="text-xs sm:text-base font-normal text-slate-400">Max</span>
               </div>
-              <div className="flex items-center justify-between text-xs mt-3 pt-2 border-t border-slate-700/40">
-                <span className="text-slate-400">Perlu perhatian</span>
+              <div className="flex items-center justify-between text-[11px] sm:text-xs mt-2 sm:mt-3 pt-2 border-t border-slate-700/40">
+                <span className="text-slate-400 hidden sm:inline">Perlu perhatian</span>
                 <span className="text-rose-400 font-semibold bg-rose-500/10 px-2 py-0.5 rounded-full">
                   {lowStockCount + overStockCount} SKU
                 </span>
@@ -528,16 +533,16 @@ export default function App() {
             </div>
 
             {/* Card 4 */}
-            <div className="bg-[#23273a] p-5 rounded-2xl border border-slate-700/40 shadow-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center">
-                  <Truck className="w-4 h-4" />
+            <div className="bg-[#23273a] p-3.5 sm:p-5 rounded-2xl border border-slate-700/40 shadow-lg">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                  <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
-                <span className="text-sm text-slate-300 font-medium">Pengadaan Aktif (PR)</span>
+                <span className="text-xs sm:text-sm text-slate-300 font-medium truncate">Pengadaan PR</span>
               </div>
-              <div className="text-3xl font-extrabold text-white mt-3">{activePrCount} Pesanan</div>
-              <div className="flex items-center justify-between text-xs mt-3 pt-2 border-t border-slate-700/40">
-                <span className="text-slate-400">Total riwayat PR</span>
+              <div className="text-xl sm:text-3xl font-extrabold text-white mt-2 sm:mt-3">{activePrCount} Pesanan</div>
+              <div className="flex items-center justify-between text-[11px] sm:text-xs mt-2 sm:mt-3 pt-2 border-t border-slate-700/40">
+                <span className="text-slate-400 hidden sm:inline">Total riwayat PR</span>
                 <span className="text-amber-300 font-semibold bg-amber-500/10 px-2 py-0.5 rounded-full">
                   {purchaseRequests.length} Transaksi
                 </span>
@@ -547,9 +552,9 @@ export default function App() {
 
           {/* BARIS GRAFIK VISUAL (Persis seperti "Warehouse workload" di gambar referensi) */}
           {activeNav === 'dashboard' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* Grafik Kiri: Donut Chart Komposisi Gudang */}
-              <div className="bg-[#23273a] p-6 rounded-2xl border border-slate-700/40 shadow-lg flex flex-col justify-between">
+              <div className="bg-[#23273a] p-4 sm:p-6 rounded-2xl border border-slate-700/40 shadow-lg flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h2 className="text-lg font-bold text-white">Komposisi Beban Gudang</h2>
@@ -604,10 +609,10 @@ export default function App() {
               </div>
 
               {/* Grafik Kanan: Perbandingan Stok Aktual vs Batas Min & Max per Barang */}
-              <div className="bg-[#23273a] p-6 rounded-2xl border border-slate-700/40 shadow-lg flex flex-col justify-between">
-                <div className="flex items-center justify-between mb-4">
+              <div className="bg-[#23273a] p-4 sm:p-6 rounded-2xl border border-slate-700/40 shadow-lg flex flex-col justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                   <div>
-                    <h2 className="text-lg font-bold text-white">Kapasitas Stok per SKU</h2>
+                    <h2 className="text-base sm:text-lg font-bold text-white">Kapasitas Stok per SKU</h2>
                     <p className="text-xs text-slate-400">Stok saat ini dibandingkan dengan batas maksimum</p>
                   </div>
                   <div className="flex items-center gap-3 text-[11px] text-slate-400">
@@ -637,11 +642,11 @@ export default function App() {
 
                     return (
                       <div key={item.id} className="space-y-1">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-200 font-medium truncate max-w-[200px]">
+                        <div className="flex justify-between text-xs gap-2">
+                          <span className="text-slate-200 font-medium truncate">
                             {item.name}
                           </span>
-                          <span className="text-slate-400 font-mono">
+                          <span className="text-slate-400 font-mono shrink-0">
                             <strong className="text-white">{item.stock}</strong> / {max} unit (Min {item.minStock})
                           </span>
                         </div>
@@ -661,10 +666,10 @@ export default function App() {
 
           {/* TABEL MASTER STOK GUDANG (Dengan Scroll Internal agar tidak memanjang ke bawah) */}
           {(activeNav === 'dashboard' || activeNav === 'inventory') && (
-            <div className="bg-[#23273a] rounded-2xl border border-slate-700/40 p-6 shadow-lg">
+            <div className="bg-[#23273a] rounded-2xl border border-slate-700/40 p-4 sm:p-6 shadow-lg">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
                 <div>
-                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
                     <Package className="w-5 h-5 text-blue-400" />
                     Daftar Stok Gudang (Real-Time)
                   </h2>
@@ -673,14 +678,14 @@ export default function App() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2.5">
-                  <div className="relative">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:flex-initial">
                     <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                     <input
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Cari SKU / nama..."
-                      className="bg-[#171926] border border-slate-700/60 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                      className="w-full bg-[#171926] border border-slate-700/60 rounded-xl pl-9 pr-3 py-2 sm:py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
                     />
                   </div>
                   <button
@@ -826,23 +831,23 @@ export default function App() {
 
           {/* PAPAN KANBAN ALUR PENGADAAN (Setiap kolom dibatasi tingginya + scroll internal!) */}
           {(activeNav === 'dashboard' || activeNav === 'procurement') && (
-            <div className="bg-[#23273a] rounded-2xl border border-slate-700/40 p-6 shadow-lg">
+            <div className="bg-[#23273a] rounded-2xl border border-slate-700/40 p-4 sm:p-6 shadow-lg">
               <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-2">
                 <div>
-                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                    <ShoppingCart className="w-5 h-5 text-amber-400" />
+                  <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                    <ShoppingCart className="w-5 h-5 text-amber-400 shrink-0" />
                     Alur Pengadaan Barang (Purchase Request Board)
                   </h2>
                   <p className="text-xs text-slate-400">
                     Setiap kolom dilengkapi scroll internal sehingga daftar tidak akan memanjang ke bawah
                   </p>
                 </div>
-                <span className="text-xs bg-[#171926] border border-slate-700/60 px-3 py-1.5 rounded-xl text-slate-300">
+                <span className="self-start md:self-auto text-xs bg-[#171926] border border-slate-700/60 px-3 py-1.5 rounded-xl text-slate-300">
                   Peran Aktif: <strong className="uppercase text-blue-400">{activeRole}</strong>
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
                 {[
                   { key: 'REQUESTED', title: '1. Diajukan Warehouse', color: 'border-amber-500/30' },
                   { key: 'APPROVED', title: '2. Disetujui Purchasing', color: 'border-blue-500/30' },
@@ -978,6 +983,30 @@ export default function App() {
           )}
         </main>
       </div>
+
+      {/* MOBILE BOTTOM NAVIGATION BAR (Hanya muncul di layar HP < md) */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-[#1e2132]/95 backdrop-blur-md border-t border-slate-800 px-3 py-2 flex items-center justify-around z-30">
+        {[
+          { id: 'dashboard', icon: LayoutDashboard, label: 'Ringkasan' },
+          { id: 'inventory', icon: Layers, label: 'Master Stok' },
+          { id: 'procurement', icon: Truck, label: 'Pengadaan PR' },
+        ].map((item) => {
+          const Icon = item.icon;
+          const active = activeNav === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveNav(item.id)}
+              className={`flex-1 py-1.5 rounded-xl flex flex-col items-center gap-1 text-[11px] font-semibold transition ${
+                active ? 'text-blue-400 bg-blue-500/10' : 'text-slate-400'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
 
       {/* DRAWER NOTIFIKASI DIVISI (Muncul saat klik ikon lonceng di atas) */}
       {showNotifDrawer && (
