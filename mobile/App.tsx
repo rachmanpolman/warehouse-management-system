@@ -231,10 +231,48 @@ export default function App() {
                 style={StyleSheet.absoluteFill}
                 scanBarcode={isScanning}
                 onReadCode={onReadCode}
-                showFrame={true}
-                laserColor={scanMode === 'OUT' ? '#38bdf8' : '#34d399'}
-                frameColor={scanMode === 'OUT' ? '#38bdf8' : '#34d399'}
+                showFrame={false}
               />
+
+              {/* Bingkai Kotak QR Persegi Presisi (220x220) di Tengah Kamera */}
+              <View style={styles.qrFrameOverlay} pointerEvents="none">
+                <View
+                  style={[
+                    styles.qrSquareBox,
+                    { borderColor: scanMode === 'OUT' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(52, 211, 153, 0.25)' },
+                  ]}>
+                  <View
+                    style={[
+                      styles.cornerTL,
+                      { borderColor: scanMode === 'OUT' ? '#38bdf8' : '#34d399' },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.cornerTR,
+                      { borderColor: scanMode === 'OUT' ? '#38bdf8' : '#34d399' },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.cornerBL,
+                      { borderColor: scanMode === 'OUT' ? '#38bdf8' : '#34d399' },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.cornerBR,
+                      { borderColor: scanMode === 'OUT' ? '#38bdf8' : '#34d399' },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.laserLine,
+                      { backgroundColor: scanMode === 'OUT' ? '#38bdf8' : '#34d399' },
+                    ]}
+                  />
+                </View>
+              </View>
 
               {loading && (
                 <View style={styles.loadingOverlay}>
@@ -521,6 +559,65 @@ const styles = StyleSheet.create({
   qtyChipActive: { backgroundColor: '#10b981' },
   qtyChipText: { color: '#94a3b8', fontSize: 11, fontWeight: '700' },
   cameraWrapper: { flex: 1, position: 'relative' },
+  qrFrameOverlay: {
+    ...StyleSheet.absoluteFill,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  qrSquareBox: {
+    width: 220,
+    height: 220,
+    borderWidth: 1,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  cornerTL: {
+    position: 'absolute',
+    top: -2,
+    left: -2,
+    width: 28,
+    height: 28,
+    borderTopWidth: 4,
+    borderLeftWidth: 4,
+    borderTopLeftRadius: 14,
+  },
+  cornerTR: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 28,
+    height: 28,
+    borderTopWidth: 4,
+    borderRightWidth: 4,
+    borderTopRightRadius: 14,
+  },
+  cornerBL: {
+    position: 'absolute',
+    bottom: -2,
+    left: -2,
+    width: 28,
+    height: 28,
+    borderBottomWidth: 4,
+    borderLeftWidth: 4,
+    borderBottomLeftRadius: 14,
+  },
+  cornerBR: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 28,
+    height: 28,
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+    borderBottomRightRadius: 14,
+  },
+  laserLine: {
+    width: '86%',
+    height: 2,
+    opacity: 0.85,
+  },
   loadingOverlay: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(23, 25, 38, 0.88)',
@@ -659,7 +756,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#1e2132',
     borderTopWidth: 1,
     borderColor: '#2d324b',
-    paddingVertical: 8,
+    paddingTop: 10,
+    paddingBottom: 54,
     paddingHorizontal: 10,
     gap: 8,
   },
