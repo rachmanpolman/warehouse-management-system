@@ -15,6 +15,8 @@ model Product {
   barcode   String          @unique
   stock     Int             @default(0)
   minStock  Int             @default(5)
+  maxStock  Int             @default(100) // Batas atas, di atas ini = overstock
+  leadTimeDays Int      @default(7)   // Berapa hari vendor butuh waktu mengirim barang
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
 

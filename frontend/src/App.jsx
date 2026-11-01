@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
-import { Package, AlertTriangle, Activity, Scan, ArrowDownRight } from 'lucide-react';
+import { Package, AlertTriangle, Activity, Scan, ArrowDownRight, Plus } from 'lucide-react';
 
 const SOCKET_SERVER_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
@@ -11,6 +11,10 @@ export default function App() {
   const [restockModalItem, setRestockModalItem] = useState(null);
   const [restockQuantity, setRestockQuantity] = useState(10);
   const [isRestocking, setIsRestocking] = useState(false);
+  const emptyForm = { sku: '', name: '', barcode: '', stock: 0, minStock: 5, maxStock: 100, leadTimeDays: 7 };
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newProduct, setNewProduct] = useState(emptyForm);
+  const [isAdding, setIsAdding] = useState(false);
 
   // 1. Ambil Data Awal dari Backend API
   const fetchProducts = async () => {
@@ -54,6 +58,22 @@ export default function App() {
         sku: product.sku,
       };
       setLogs((prev) => [newLog, ...prev.slice(0, 7)]); // simpan 8 log terbaru
+    });
+
+    // 4. BARANG BARU DIDAFTARKAN (dari tab/perangkat mana pun)
+    socket.on('product:created', ({ product, message }) => {
+      setProducts((prev) =>
+        prev.some((p) => p.id === product.id) ? prev : [product, ...prev]
+      );
+      setLogs((prev) => [
+        { id: Date.now(), text: message, time: new Date().toLocaleTimeString(), sku: product.sku },
+        ...prev.slice(0, 7),
+      ]);
+    });
+
+    // 5. DATA BARANG DIUBAH (nama / batas stok)
+    socket.on('product:updated', ({ product }) => {
+      setProducts((prev) => prev.map((p) => (p.id === product.id ? product : p)));
     });
 
     return () => socket.disconnect();
@@ -100,6 +120,31 @@ export default function App() {
       alert('Gagal terhubung ke backend!');
     } finally {
       setIsRestocking(false);
+    }
+  };
+
+    // Fungsi Kirim Barang Baru ke Backend
+  const handleAddSubmit = async (e) => {
+    e.preventDefault();
+    setIsAdding(true);
+    try {
+      const res = await fetch(`${SOCKET_SERVER_URL}/api/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newProduct),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error);
+      } else {
+        setShowAddModal(false);
+        setNewProduct(emptyForm);
+        // Tidak perlu setProducts di sini: barang baru akan masuk lewat event WebSocket 'product:created'
+      }
+    } catch (err) {
+      alert('Gagal terhubung ke backend!');
+    } finally {
+      setIsAdding(false);
     }
   };
 
@@ -154,10 +199,18 @@ export default function App() {
           
           {/* TABEL STOK LIVE (2 KOLOM) */}
           <div className="lg:col-span-2 bg-slate-800/60 rounded-2xl border border-slate-700/60 p-6 shadow-xl">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <Package className="w-5 h-5 text-blue-400" />
-              Daftar Stok Gudang (Real-time)
-            </h2>
+            <div className="flex items-center justify-between mb-4 gap-3">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <Package className="w-5 h-5 text-blue-400" />
+                Daftar Stok Gudang (Real-time)
+              </h2>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-3 py-2 rounded-xl flex items-center gap-1.5 transition active:scale-95">
+                <Plus className="w-4 h-4" />
+                Tambah Barang
+              </button>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-900/50 text-slate-400 border-b border-slate-700">
@@ -263,7 +316,7 @@ export default function App() {
 
       </div>
 
-              {/* MODAL RESTOCK BARANG MASUK */}
+        {/* MODAL RESTOCK BARANG MASUK */}
         {restockModalItem && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl">
@@ -309,6 +362,91 @@ export default function App() {
                     className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-center"
                   >
                     {isRestocking ? 'Memproses...' : 'Konfirmasi Masuk'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL TAMBAH BARANG BARU */}
+        {showAddModal && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-slate-800 border border-slate-700 w-full max-w-lg rounded-2xl p-6 shadow-2xl">
+              <h3 className="text-xl font-bold text-white mb-1">➕ Tambah Barang Baru</h3>
+              <p className="text-slate-400 text-sm mb-4">
+                Kosongkan barcode agar dibuat otomatis oleh sistem.
+              </p>
+
+              <form onSubmit={handleAddSubmit} className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">SKU *</label>
+                    <input
+                      value={newProduct.sku}
+                      onChange={(e) => setNewProduct({ ...newProduct, sku: e.target.value })}
+                      placeholder="BRG-004"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Barcode (opsional)</label>
+                    <input
+                      value={newProduct.barcode}
+                      onChange={(e) => setNewProduct({ ...newProduct, barcode: e.target.value })}
+                      placeholder="Otomatis"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Nama Barang *</label>
+                  <input
+                    value={newProduct.name}
+                    onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                    placeholder="Tas Ransel Eiger"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { key: 'stock', label: 'Stok Awal' },
+                    { key: 'leadTimeDays', label: 'Lama Kirim Vendor (hari)' },
+                    { key: 'minStock', label: 'Stok Minimum' },
+                    { key: 'maxStock', label: 'Stok Maksimum' },
+                  ].map(({ key, label }) => (
+                    <div key={key}>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">{label}</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newProduct[key]}
+                        onChange={(e) => setNewProduct({ ...newProduct, [key]: e.target.value })}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+                        required
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => { setShowAddModal(false); setNewProduct(emptyForm); }}
+                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 py-2.5 rounded-xl text-sm font-semibold transition"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isAdding}
+                    className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white py-2.5 rounded-xl text-sm font-bold transition"
+                  >
+                    {isAdding ? 'Menyimpan...' : 'Simpan Barang'}
                   </button>
                 </div>
               </form>

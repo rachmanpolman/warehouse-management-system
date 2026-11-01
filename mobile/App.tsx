@@ -11,7 +11,7 @@ import {
 import { Camera } from 'react-native-camera-kit';
 
 // ⚠️ GANTI DENGAN IP LAPTOP ANDA (Cek via ipconfig di terminal)
-const LAPTOP_IP = '10.33.226.51';
+const LAPTOP_IP = 'https://warehouse-management-system-backend-q5ms.onrender.com';
 const PORT = '5000';
 const BACKEND_URL = `http://${LAPTOP_IP}:${PORT}/api/products/reduce-stock`;
 
