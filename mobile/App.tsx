@@ -10,10 +10,9 @@ import {
 } from 'react-native';
 import { Camera } from 'react-native-camera-kit';
 
-// ⚠️ GANTI DENGAN IP LAPTOP ANDA (Cek via ipconfig di terminal)
-const LAPTOP_IP = 'https://warehouse-management-system-backend-q5ms.onrender.com';
-const PORT = '5000';
-const BACKEND_URL = `http://${LAPTOP_IP}:${PORT}/api/products/reduce-stock`;
+// URL Cloud Backend Render (Online 24 Jam via Kuota Data / Wi-Fi)
+const API_BASE_URL = 'https://warehouse-management-system-backend-q5ms.onrender.com';
+const BACKEND_URL = `${API_BASE_URL}/api/products/reduce-stock`;
 
 export default function App() {
   const [isScanning, setIsScanning] = useState(true);
@@ -51,7 +50,7 @@ export default function App() {
     } catch (error) {
       Alert.alert(
         'Koneksi Gagal',
-        `Tidak bisa menghubungi backend di ${LAPTOP_IP}:${PORT}. Pastikan laptop & HP satu jaringan!`,
+        `Tidak bisa menghubungi server Cloud (${API_BASE_URL}). Pastikan internet HP aktif!`,
       );
     } finally {
       setLoading(false);
@@ -65,7 +64,7 @@ export default function App() {
       {/* HEADER */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Warehouse Scanner CLI</Text>
-        <Text style={styles.headerSubtitle}>Server: {LAPTOP_IP}:{PORT}</Text>
+        <Text style={styles.headerSubtitle}>Cloud: {API_BASE_URL.replace('https://', '')}</Text>
       </View>
 
       {/* KAMERA NATIVE LENGKAP DENGAN KOTAK BIDIK & LASER */}

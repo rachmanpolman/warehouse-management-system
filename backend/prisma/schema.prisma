@@ -21,6 +21,7 @@ model Product {
   updatedAt DateTime        @updatedAt
 
   movements StockMovement[]
+  purchaseRequests PurchaseRequest[]
 }
 
 // Tabel Riwayat Pengurangan / Penambahan Stok
@@ -32,4 +33,30 @@ model StockMovement {
   quantity  Int
   notes     String?
   createdAt DateTime @default(now())
+}
+
+// Tabel Notifikasi per Divisi (warehouse, purchasing, incoming, outgoing)
+model Notification {
+  id         String   @id @default(uuid())
+  targetRole String   // "warehouse" | "purchasing" | "incoming" | "outgoing"
+  type       String   // "INFO" | "WARNING" | "CRITICAL" | "SUCCESS"
+  title      String
+  message    String
+  productId  String?
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+// Tabel Alur Pengadaan (Warehouse -> Purchasing -> Vendor -> Incoming)
+model PurchaseRequest {
+  id               String   @id @default(uuid())
+  productId        String
+  product          Product  @relation(fields: [productId], references: [id])
+  quantity         Int      // Jumlah unit yang diminta Warehouse
+  receivedQuantity Int?     // Jumlah fisik yang diterima Incoming nanti
+  vendorName       String?  // Nama vendor/supplier yang dibayar Purchasing
+  status           String   @default("REQUESTED") // REQUESTED | APPROVED | REJECTED | PAID | RECEIVED
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }

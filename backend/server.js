@@ -15,7 +15,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: '*', // Membolehkan frontend & mobile scanner terhubung
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH'],
   },
 });
 
@@ -29,13 +29,68 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// 1. EVENT SOCKET.IO (Real-time connection)
+// 1. EVENT SOCKET.IO (Real-time connection + Room per Divisi)
+const VALID_ROLES = ['warehouse', 'purchasing', 'incoming', 'outgoing'];
+
 io.on('connection', (socket) => {
   console.log(`⚡ Client terhubung ke WebSocket: ${socket.id}`);
+
+  // Saat frontend memilih divisi, masukkan socket ke kamar (room) divisi tersebut
+  socket.on('join:role', (role) => {
+    VALID_ROLES.forEach((r) => socket.leave(`room:${r}`));
+    if (VALID_ROLES.includes(role)) {
+      socket.join(`room:${role}`);
+      console.log(`🔔 Socket ${socket.id} bergabung ke room:${role}`);
+    }
+  });
 
   socket.on('disconnect', () => {
     console.log(`❌ Client terputus: ${socket.id}`);
   });
+});
+
+// Helper: Simpan notifikasi ke Database & pancarkan ke Room divisi terkait
+async function notifyRoles(roles, { type = 'INFO', title, message, productId = null }) {
+  try {
+    for (const role of roles) {
+      const notif = await prisma.notification.create({
+        data: { targetRole: role, type, title, message, productId },
+      });
+      io.to(`room:${role}`).emit('notification:new', notif);
+    }
+  } catch (err) {
+    console.error('Gagal mengirim notifikasi:', err.message);
+  }
+}
+
+// 1B. API: AMBIL RIWAYAT NOTIFIKASI PER DIVISI
+app.get('/api/notifications', async (req, res) => {
+  const role = req.query.role || 'warehouse';
+  try {
+    const list = await prisma.notification.findMany({
+      where: { targetRole: String(role) },
+      orderBy: { createdAt: 'desc' },
+      take: 25,
+    });
+    return res.json(list);
+  } catch (error) {
+    return res.status(500).json({ error: 'Gagal mengambil notifikasi.' });
+  }
+});
+
+// 1C. API: TANDAI SEMUA NOTIFIKASI DIVISI SUDAH DIBACA
+app.patch('/api/notifications/read-all', async (req, res) => {
+  const { role } = req.body;
+  if (!role) return res.status(400).json({ error: 'Role wajib dikirim!' });
+  try {
+    await prisma.notification.updateMany({
+      where: { targetRole: String(role), isRead: false },
+      data: { isRead: true },
+    });
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ error: 'Gagal menandai notifikasi.' });
+  }
 });
 
 // 2. API: AMBIL SEMUA BARANG (Dengan Redis Caching)
@@ -180,6 +235,89 @@ app.put('/api/products/:id', async (req, res) => {
   }
 });
 
+// 2D. API: ANALISIS UNDERSTOCK & OVERSTOCK BERDASARKAN RIWAYAT 30 HARI
+app.get('/api/products/:id/insights', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const product = await prisma.product.findUnique({ where: { id } });
+    if (!product) {
+      return res.status(404).json({ error: 'Barang tidak ditemukan!' });
+    }
+
+    // Ambil total barang keluar (OUT) dalam 30 hari terakhir
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const agg = await prisma.stockMovement.aggregate({
+      where: {
+        productId: id,
+        type: 'OUT',
+        createdAt: { gte: thirtyDaysAgo },
+      },
+      _sum: { quantity: true },
+    });
+
+    const totalOut30d = agg._sum.quantity || 0;
+    const avgDailyUsage = Number((totalOut30d / 30).toFixed(2));
+
+    // Gunakan minimal 0.5 unit/hari sebagai asumsi dasar jika barang baru belum punya banyak riwayat
+    const effectiveDaily = avgDailyUsage > 0 ? avgDailyUsage : 0.5;
+
+    // 1. Berapa hari lagi stok akan menyentuh 0?
+    const daysUntilZero =
+      avgDailyUsage > 0 ? Math.floor(product.stock / avgDailyUsage) : null;
+
+    // 2. Rekomendasi minStock (kebutuhan selama tunggu vendor + 50% safety stock)
+    const recommendedMinStock = Math.max(
+      2,
+      Math.ceil(effectiveDaily * product.leadTimeDays * 1.5)
+    );
+
+    // 3. Rekomendasi maxStock (kebutuhan lead time + 30 hari siklus simpan)
+    const recommendedMaxStock = Math.max(
+      recommendedMinStock + 10,
+      Math.ceil(effectiveDaily * (product.leadTimeDays + 30))
+    );
+
+    // 4. Tentukan status & saran tindakan
+    let status = 'AMAN';
+    let advice = 'Stok berada di rentang ideal berdasarkan pergerakan barang.';
+
+    if (product.stock === 0) {
+      status = 'HABIS';
+      advice = 'Stok sudah 0! Segera lakukan pengadaan darurat ke vendor.';
+    } else if (product.stock <= product.minStock) {
+      status = 'UNDERSTOCK';
+      advice = `Stok menyentuh batas minimum (${product.minStock}). Segera pesan ulang karena vendor butuh ${product.leadTimeDays} hari pengiriman.`;
+    } else if (product.stock > product.maxStock) {
+      status = 'OVERSTOCK';
+      advice = `Stok melebihi batas maksimum (${product.maxStock}). Hentikan pembelian sementara agar tidak menumpuk di gudang.`;
+    } else if (product.stock > recommendedMaxStock && totalOut30d > 0) {
+      status = 'OVERSTOCK_HISTORIS';
+      advice = `Berdasarkan data 30 hari terakhir (keluar ${totalOut30d} pcs), stok saat ini (${product.stock}) terlalu banyak dibanding kebutuhan nyata (maks ideal ${recommendedMaxStock} pcs).`;
+    }
+
+    return res.json({
+      productId: product.id,
+      sku: product.sku,
+      name: product.name,
+      stock: product.stock,
+      minStock: product.minStock,
+      maxStock: product.maxStock,
+      leadTimeDays: product.leadTimeDays,
+      totalOut30d,
+      avgDailyUsage,
+      daysUntilZero,
+      recommendedMinStock,
+      recommendedMaxStock,
+      status,
+      advice,
+    });
+  } catch (error) {
+    console.error('Error insights:', error.message);
+    return res.status(500).json({ error: 'Gagal menghitung analisis stok.' });
+  }
+});
+
 // 3. API: PENGURANGAN STOK VIA SCAN BARCODE (Inti Proyek Anda!)
 app.post('/api/products/reduce-stock', async (req, res) => {
   const { barcode, quantity = 1 } = req.body;
@@ -233,6 +371,24 @@ app.post('/api/products/reduce-stock', async (req, res) => {
 
     // Bersihkan cache Redis agar request berikutnya mengambil stok paling baru
     await redis.del('products:all');
+    // Kirim notifikasi ke divisi Outgoing
+    const p = result.updatedProduct;
+    await notifyRoles(['outgoing'], {
+      type: 'INFO',
+      title: `Barang Keluar: ${p.name}`,
+      message: `${quantity} unit keluar via scan. Sisa stok gudang: ${p.stock} unit.`,
+      productId: p.id,
+    });
+
+    // Jika stok menyentuh atau di bawah minStock, beri peringatan ke Warehouse & Purchasing!
+    if (p.stock <= p.minStock) {
+      await notifyRoles(['warehouse', 'purchasing'], {
+        type: p.stock === 0 ? 'CRITICAL' : 'WARNING',
+        title: p.stock === 0 ? `🚨 STOK HABIS: ${p.name}` : `⚠️ Understock: ${p.name}`,
+        message: `Sisa stok tinggal ${p.stock} unit (batas min: ${p.minStock}). Segera lakukan pengadaan ke vendor!`,
+        productId: p.id,
+      });
+    }
     console.log('🧹 [Redis Invalidation] Cache dibersihkan karena ada pemotongan stok!');
 
     return res.json({
@@ -298,6 +454,25 @@ app.post('/api/products/restock', async (req, res) => {
 
     // Bersihkan cache Redis agar request berikutnya mengambil stok paling baru
     await redis.del('products:all');
+    // Kirim notifikasi ke divisi Incoming & Warehouse
+    const p = result.updatedProduct;
+    await notifyRoles(['incoming', 'warehouse'], {
+      type: 'SUCCESS',
+      title: `Barang Masuk: ${p.name}`,
+      message: `+${qty} unit diterima di Incoming. Total stok sekarang: ${p.stock} unit.`,
+      productId: p.id,
+    });
+
+    // Jika ternyata jumlah stok melewati batas maxStock, beri peringatan Overstock!
+    if (p.stock > p.maxStock) {
+      await notifyRoles(['warehouse', 'purchasing'], {
+        type: 'WARNING',
+        title: `📦 Overstock: ${p.name}`,
+        message: `Stok mencapai ${p.stock} unit, melebihi batas maksimum (${p.maxStock} unit). Tahan pembelian berikutnya.`,
+        productId: p.id,
+      });
+    }
+    
     console.log('🧹 [Redis Invalidation] Cache dibersihkan karena ada barang restock masuk!');
     
     return res.json({
@@ -314,4 +489,216 @@ app.post('/api/products/restock', async (req, res) => {
 // Menjalankan Server
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server berjalan di http://localhost:${PORT}`);
+});
+
+// 5. API: AMBIL SEMUA PURCHASE REQUEST (Beserta Data Produknya)
+app.get('/api/purchase-requests', async (req, res) => {
+  try {
+    const list = await prisma.purchaseRequest.findMany({
+      include: { product: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return res.json(list);
+  } catch (error) {
+    console.error('Error get PR:', error.message);
+    return res.status(500).json({ error: 'Gagal mengambil daftar pengajuan pembelian.' });
+  }
+});
+
+// 5B. API: WAREHOUSE MENGAJUKAN PEMBELIAN BARANG (Saat Understock)
+app.post('/api/purchase-requests', async (req, res) => {
+  const { productId, quantity, vendorName, notes } = req.body;
+  const qty = parseInt(quantity, 10);
+
+  if (!productId || isNaN(qty) || qty <= 0) {
+    return res.status(400).json({ error: 'Produk dan jumlah pesanan (positif) wajib diisi!' });
+  }
+
+  try {
+    const product = await prisma.product.findUnique({ where: { id: productId } });
+    if (!product) {
+      return res.status(404).json({ error: 'Barang tidak ditemukan!' });
+    }
+
+    const pr = await prisma.purchaseRequest.create({
+      data: {
+        productId,
+        quantity: qty,
+        vendorName: vendorName?.trim() || 'Vendor Utama',
+        notes: notes?.trim() || `Pengajuan restock dari Warehouse (Stok saat ini: ${product.stock})`,
+        status: 'REQUESTED',
+      },
+      include: { product: true },
+    });
+
+    // Pancarkan ke semua layar secara real-time
+    io.emit('pr:updated', pr);
+
+    // Kirim notifikasi ke Tim Purchasing!
+    await notifyRoles(['purchasing'], {
+      type: 'WARNING',
+      title: `📝 Pengajuan Pembelian: ${product.name}`,
+      message: `Warehouse meminta pembelian ${qty} unit ${product.name}. Menunggu persetujuan Purchasing.`,
+      productId: product.id,
+    });
+
+    return res.status(201).json({ success: true, data: pr });
+  } catch (error) {
+    console.error('Error create PR:', error.message);
+    return res.status(500).json({ error: 'Gagal membuat pengajuan pembelian.' });
+  }
+});
+
+// 5C. API: PURCHASING SETUJUI / TOLAK / BAYAR VENDOR (State Machine)
+app.patch('/api/purchase-requests/:id/status', async (req, res) => {
+  const { id } = req.params;
+  const { status, vendorName } = req.body;
+
+  // Aturan lompatan status yang sah (Anti-Lompat Alur)
+  const ALLOWED_NEXT = {
+    REQUESTED: ['APPROVED', 'REJECTED'],
+    APPROVED: ['PAID'],
+  };
+
+  try {
+    const existing = await prisma.purchaseRequest.findUnique({
+      where: { id },
+      include: { product: true },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Data pengajuan tidak ditemukan!' });
+    }
+
+    const allowed = ALLOWED_NEXT[existing.status] || [];
+    if (!allowed.includes(status)) {
+      return res.status(400).json({
+        error: `Alur tidak sah! Status ${existing.status} tidak boleh langsung ke ${status}.`,
+      });
+    }
+
+    const updated = await prisma.purchaseRequest.update({
+      where: { id },
+      data: {
+        status,
+        vendorName: vendorName?.trim() || existing.vendorName,
+      },
+      include: { product: true },
+    });
+
+    io.emit('pr:updated', updated);
+
+    // Kirim notifikasi otomatis sesuai tahapan alur!
+    if (status === 'APPROVED') {
+      await notifyRoles(['warehouse'], {
+        type: 'INFO',
+        title: `✅ Pengajuan Disetujui: ${updated.product.name}`,
+        message: `Purchasing menyetujui pembelian ${updated.quantity} unit ke ${updated.vendorName}.`,
+        productId: updated.productId,
+      });
+    } else if (status === 'REJECTED') {
+      await notifyRoles(['warehouse'], {
+        type: 'WARNING',
+        title: `❌ Pengajuan Ditolak: ${updated.product.name}`,
+        message: `Purchasing menolak pengajuan ${updated.quantity} unit ${updated.product.name}.`,
+        productId: updated.productId,
+      });
+    } else if (status === 'PAID') {
+      await notifyRoles(['incoming', 'warehouse'], {
+        type: 'SUCCESS',
+        title: `💳 Vendor Dibayar: ${updated.product.name}`,
+        message: `Purchasing telah membayar ${updated.vendorName} (${updated.quantity} unit). Divisi Incoming harap bersiap menerima barang!`,
+        productId: updated.productId,
+      });
+    }
+
+    return res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Error update PR status:', error.message);
+    return res.status(500).json({ error: 'Gagal memperbarui status pengajuan.' });
+  }
+});
+
+// 5D. API: DIVISI INCOMING MENERIMA BARANG DARI VENDOR + UPDATE STOK OTOMATIS
+app.post('/api/purchase-requests/:id/receive', async (req, res) => {
+  const { id } = req.params;
+  const { receivedQuantity } = req.body;
+
+  try {
+    const existing = await prisma.purchaseRequest.findUnique({
+      where: { id },
+      include: { product: true },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Data pengajuan tidak ditemukan!' });
+    }
+
+    if (existing.status !== 'PAID') {
+      return res.status(400).json({
+        error: 'Hanya pesanan yang sudah dibayar (PAID) yang bisa diterima oleh Incoming!',
+      });
+    }
+
+    const qty = receivedQuantity !== undefined ? parseInt(receivedQuantity, 10) : existing.quantity;
+    if (isNaN(qty) || qty <= 0) {
+      return res.status(400).json({ error: 'Jumlah barang diterima harus lebih dari 0!' });
+    }
+
+    // TRANSAKSI ATOMIK: Update PR + Tambah Stok Produk + Catat Mutasi IN
+    const result = await prisma.$transaction(async (tx) => {
+      const updatedProduct = await tx.product.update({
+        where: { id: existing.productId },
+        data: { stock: { increment: qty } },
+      });
+
+      const movement = await tx.stockMovement.create({
+        data: {
+          productId: existing.productId,
+          type: 'IN',
+          quantity: qty,
+          notes: `Penerimaan PR dari ${existing.vendorName}`,
+        },
+      });
+
+      const updatedPr = await tx.purchaseRequest.update({
+        where: { id },
+        data: {
+          status: 'RECEIVED',
+          receivedQuantity: qty,
+        },
+        include: { product: true },
+      });
+
+      return { updatedProduct, movement, updatedPr };
+    });
+
+    // Hapus cache Redis & pancarkan ke semua layar
+    await redis.del('products:all');
+
+    io.emit('stock:updated', {
+      product: result.updatedProduct,
+      movement: result.movement,
+      message: `Incoming menerima PR: ${result.updatedProduct.name} (+${qty} unit)`,
+    });
+
+    io.emit('pr:updated', result.updatedPr);
+
+    // Kirim notifikasi ke Warehouse & Purchasing bahwa barang sudah masuk gudang!
+    await notifyRoles(['warehouse', 'purchasing', 'incoming'], {
+      type: 'SUCCESS',
+      title: `📦 Barang PR Tiba: ${result.updatedProduct.name}`,
+      message: `Incoming telah menerima ${qty} unit dari ${existing.vendorName}. Stok gudang kini ${result.updatedProduct.stock} unit & siap ditempel QR!`,
+      productId: result.updatedProduct.id,
+    });
+
+    return res.json({
+      success: true,
+      data: result.updatedPr,
+      product: result.updatedProduct,
+    });
+  } catch (error) {
+    console.error('Error receive PR:', error.message);
+    return res.status(500).json({ error: 'Gagal memproses penerimaan barang.' });
+  }
 });
