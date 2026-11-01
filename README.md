@@ -17,7 +17,7 @@ Sistem **Inventory & Warehouse Management System (WMS) Real-Time** terintegrasi 
 | :--- | :--- | :--- |
 | 🌐 **Web Dashboard (Vercel)** | [**warehouse-management-system-ruby-alpha.vercel.app**](https://warehouse-management-system-ruby-alpha.vercel.app) | 🟢 Online |
 | ⚡ **Cloud Backend API (Render)** | [**warehouse-management-system-backend-q5ms.onrender.com**](https://warehouse-management-system-backend-q5ms.onrender.com/api/products) | 🟢 Online |
-| 📱 **Android Mobile Scanner (.APK)** | [**📥 Unduh `wms-mobile-scanner.apk` (Siap Install di HP)**](https://github.com/rachmanpolman/warehouse-live/raw/main/apk/wms-mobile-scanner.apk) | 🟢 Standalone Release |
+| 📱 **Android Mobile Scanner (.APK)** | [**📥 Unduh `wms-mobile-scanner.apk` (Siap Install di HP)**](https://github.com/rachmanpolman/warehouse-management-system/raw/main/apk/wms-mobile-scanner.apk) | 🟢 Standalone Release |
 
 > 💡 **Cara Mencoba Sinkronisasi Real-Time (Web + HP):**
 > 1. Buka [**Web Dashboard**](https://warehouse-management-system-ruby-alpha.vercel.app) di laptop/komputer Anda.
@@ -187,3 +187,4 @@ warehouse-live/
 │   └── android/                    # Konfigurasi Native Android & Gradle
 └── README.md
 ```
+
