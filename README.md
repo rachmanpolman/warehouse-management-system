@@ -27,6 +27,14 @@ Sistem **Inventory & Warehouse Management System (WMS) Real-Time** terintegrasi 
 
 ---
 
+## 📸 Tampilan Antarmuka (Web & Mobile App)
+
+| 🌐 Web Dashboard (Real-Time Inventory & Kanban PR) | 📱 Mobile Scanner (Camera QR/Barcode & 3-Tab Menu) |
+| :---: | :---: |
+| <img src="./docs/web-dashboard.png" alt="Web Dashboard" width="600"/> | <img src="./docs/mobile-app.png" alt="Mobile Scanner" width="280"/> |
+
+---
+
 ## 🏗️ Arsitektur Sistem
 
 ```mermaid
