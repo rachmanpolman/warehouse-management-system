@@ -19,6 +19,8 @@ Sistem **Inventory & Warehouse Management System (WMS) Real-Time** terintegrasi 
 | ⚡ **Cloud Backend API (Render)** | [**warehouse-management-system-backend-q5ms.onrender.com**](https://warehouse-management-system-backend-q5ms.onrender.com/api/products) | 🟢 Online |
 | 📱 **Android Mobile Scanner (.APK)** | [**📥 Unduh `wms-mobile-scanner.apk` (Siap Install di HP)**](https://github.com/rachmanpolman/warehouse-management-system/raw/main/apk/wms-mobile-scanner.apk) | 🟢 Standalone Release |
 
+> ⏳ **Catatan:** Website ini menggunakan layanan *cloud & database serverless* gratis (**Neon / Render**). Jika website pertama kali dibuka setelah beberapa saat tidak aktif, mungkin akan ada jeda waktu sekitar **5–10 detik** karena proses *'cold start'* server dan database sebelum data tersinkronisasi penuh. Terima kasih atas kesabarannya.
+
 > 💡 **Cara Mencoba Sinkronisasi Real-Time (Web + HP):**
 > 1. Buka [**Web Dashboard**](https://warehouse-management-system-ruby-alpha.vercel.app) di laptop/komputer Anda.
 > 2. Unduh dan pasang file [**`wms-mobile-scanner.apk`**](./apk/wms-mobile-scanner.apk) di HP Android Anda (tidak memerlukan kabel USB / laptop karena sudah terhubung langsung ke Cloud Server).

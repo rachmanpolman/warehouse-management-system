@@ -65,14 +65,21 @@ export default function App() {
   const [editModalItem, setEditModalItem] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  // 1. Ambil Data Barang
-  const fetchProducts = async () => {
+  // 1. Ambil Data Barang (dilengkapi auto-retry jika database/server sedang cold start)
+  const fetchProducts = async (retryCount = 0) => {
     try {
       const res = await fetch(`${SOCKET_SERVER_URL}/api/products`);
       const data = await res.json();
-      if (Array.isArray(data)) setProducts(data);
+      if (Array.isArray(data)) {
+        setProducts(data);
+      } else if (retryCount < 4) {
+        setTimeout(() => fetchProducts(retryCount + 1), 3000);
+      }
     } catch (err) {
       console.error('Gagal mengambil data:', err);
+      if (retryCount < 4) {
+        setTimeout(() => fetchProducts(retryCount + 1), 3000);
+      }
     }
   };
 
@@ -88,13 +95,20 @@ export default function App() {
   };
 
   // 1C. Ambil Daftar Purchase Request
-  const fetchPurchaseRequests = async () => {
+  const fetchPurchaseRequests = async (retryCount = 0) => {
     try {
       const res = await fetch(`${SOCKET_SERVER_URL}/api/purchase-requests`);
       const data = await res.json();
-      if (Array.isArray(data)) setPurchaseRequests(data);
+      if (Array.isArray(data)) {
+        setPurchaseRequests(data);
+      } else if (retryCount < 4) {
+        setTimeout(() => fetchPurchaseRequests(retryCount + 1), 3000);
+      }
     } catch (err) {
       console.error('Gagal mengambil PR:', err);
+      if (retryCount < 4) {
+        setTimeout(() => fetchPurchaseRequests(retryCount + 1), 3000);
+      }
     }
   };
 
@@ -108,6 +122,9 @@ export default function App() {
     socket.on('connect', () => {
       setIsConnected(true);
       socket.emit('join:role', activeRole);
+      fetchProducts();
+      fetchPurchaseRequests();
+      fetchNotifications(activeRole);
     });
 
     socket.on('disconnect', () => {
